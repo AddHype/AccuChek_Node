@@ -1,17 +1,25 @@
-const express = require('express');
-const {User,userJoiSchema, userJoiSigninSchema} = require('../../models/userModel/user.model')
+const express = require("express");
+const {
+  User,
+  userJoiSchema,
+  userJoiSigninSchema,
+} = require("../../models/userModel/user.model");
 // const cources = require('../models/courseSchema')
 const router = express.Router();
-const {Course} = require('../../models/courseModel/course.model');
+const { Course } = require("../../models/courseModel/course.model");
 const app = express();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const sendOTPTOEmail= require('../../auth/auths.Email')
-const OTPModel = require('../../models/userModel/opt')
-const {deleteStoredOTPFromDatabase,getStoredOTPFromDatabase, storeOTPInDatabase } = require("../../models/userModel/opt.js");
-const dotenv = require('dotenv');
-const nodemailer = require('nodemailer');
-const bodyParser = require('body-parser');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const sendOTPTOEmail = require("../../auth/auths.Email");
+const OTPModel = require("../../models/userModel/opt");
+const {
+  deleteStoredOTPFromDatabase,
+  getStoredOTPFromDatabase,
+  storeOTPInDatabase,
+} = require("../../models/userModel/opt.js");
+const dotenv = require("dotenv");
+const nodemailer = require("nodemailer");
+const bodyParser = require("body-parser");
 
 const sendOTP = async (req, res) => {
   try {
@@ -19,8 +27,8 @@ const sendOTP = async (req, res) => {
 
     function generateOTP() {
       const length = 6;
-      const charset = '0123456789';
-      let otp = '';
+      const charset = "0123456789";
+      let otp = "";
 
       for (let i = 0; i < length; i++) {
         const randomIndex = Math.floor(Math.random() * charset.length);
@@ -35,13 +43,12 @@ const sendOTP = async (req, res) => {
     // Store the OTP in the OTP model
     await storeOTPInDatabase(email, generatedOtp, new Date());
 
-    return res.status(200).json({ message: 'OTP sent and saved' });
+    return res.status(200).json({ message: "OTP sent and saved" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to send and save OTP' });
+    res.status(500).json({ error: "Failed to send and save OTP" });
   }
 };
-
 
 const verifyOTP = async (req, res) => {
   try {
@@ -51,7 +58,7 @@ const verifyOTP = async (req, res) => {
     const { storedOtp, otpTimestamp } = await getStoredOTPFromDatabase(email);
 
     if (!storedOtp) {
-      return res.status(404).json({ message: 'OTP not found for this email' });
+      return res.status(404).json({ message: "OTP not found for this email" });
     }
 
     const currentTime = new Date();
@@ -59,19 +66,19 @@ const verifyOTP = async (req, res) => {
     otpExpirationTime.setMinutes(otpExpirationTime.getMinutes() + 1);
 
     if (currentTime > otpExpirationTime) {
-      return res.status(410).json({ message: 'OTP has expired' });
+      return res.status(410).json({ message: "OTP has expired" });
     }
 
     if (otp === storedOtp) {
-      deleteStoredOTPFromDatabase(email)
+      deleteStoredOTPFromDatabase(email);
 
-      return res.status(200).json({ message: 'OTP verified successfully' });
+      return res.status(200).json({ message: "OTP verified successfully" });
     } else {
-      return res.status(401).json({ message: 'Invalid OTP' });
+      return res.status(401).json({ message: "Invalid OTP" });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to verify OTP' });
+    res.status(500).json({ error: "Failed to verify OTP" });
   }
 };
 
@@ -82,12 +89,15 @@ const userRegister = async (req, res) => {
   }
 
   try {
-    const { name,email, password, country, confirm_password, language } = req.body;
+    const { name, email, password, country, confirm_password, language } =
+      req.body;
 
     // Check if the email exists in the database
     const userExists = await User.findOne({ email: email });
     if (userExists) {
-      return res.status(422).json({ error: 'This email is already registered' });
+      return res
+        .status(422)
+        .json({ error: "This email is already registered" });
     }
 
     const image = req.file.filename;
@@ -99,20 +109,19 @@ const userRegister = async (req, res) => {
       confirm_password,
       language,
       image,
-      points: 0
+      points: 0,
     });
     await newUser.save();
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      user: newUser
+      message: "User registered successfully",
+      user: newUser,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to add user' });
+    res.status(500).json({ error: "Failed to add user" });
   }
 };
-
 
 // User Sign in
 const userSigin = async (req, res) => {
@@ -124,7 +133,7 @@ const userSigin = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: 'Not Empty Fields allowed' });
+      return res.status(400).json({ message: "Not Empty Fields allowed" });
     }
 
     const userLogin = await User.findOne({ email: email });
@@ -133,7 +142,7 @@ const userSigin = async (req, res) => {
       const isMatched = await bcrypt.compare(password, userLogin.password);
 
       if (!isMatched) {
-        return res.status(400).json({ message: 'Invalid Credentials' });
+        return res.status(400).json({ message: "Invalid Credentials" });
       } else {
         const token = jwt.sign(
           {
@@ -142,14 +151,14 @@ const userSigin = async (req, res) => {
             userImage: userLogin.image,
             userPoints: userLogin.points,
           },
-          'pakistan009',
+          "pakistan009",
           {
-            expiresIn: '1h',
+            expiresIn: "1h",
           }
         );
 
         return res.status(200).json({
-          message: 'User Login Successfully',
+          message: "User Login Successfully",
           token: token,
           userId: userLogin._id,
           name: userLogin.name,
@@ -158,55 +167,68 @@ const userSigin = async (req, res) => {
         });
       }
     } else {
-      return res.status(400).json({ message: 'Invalid Credentials' });
+      return res.status(400).json({ message: "Invalid Credentials" });
     }
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
 const userInfo = async (req, res) => {
   try {
-    const result = await User.updateOne(
-      { _id: req.params._id },
-      { $set: req.body }
+    const { _id } = req.params;
+    const updateFields = { ...req.body };
+
+    // Check if a new image is uploaded
+    if (req.file) {
+      updateFields.image = req.file.filename;
+    }
+
+    // Use findByIdAndUpdate with { new: true } to return the updated document
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      { $set: updateFields },
+      { new: true }
     );
-    res.send(result);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
-    console.error("Error while updating user points", error);
-    res.status(500).json({ error: "Failed to update points Server Error" });
+    console.error("Error while updating user profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
   }
 };
 
-const updateGameStatus = async(req,res) =>{
-  try{
+const updateGameStatus = async (req, res) => {
+  try {
     const result = await Course.updateOne(
       { _id: req.params._id },
       { $set: req.body }
     );
     res.send(result);
-  }catch(error){
+  } catch (error) {
     console.error("Error while updating game status", error);
-    res.status(500).json({ error: "Failed to update game status"});
-    }
+    res.status(500).json({ error: "Failed to update game status" });
+  }
 };
 // Get All Users
 const getMembers = async (req, res) => {
   let data = await User.find();
-    console.log(data);
-    data.length > 0 ? res.send(data) : res.send("No data");
+  console.log(data);
+  data.length > 0 ? res.send(data) : res.send("No data");
 };
 
 // Dell Member
 const dellMember = async (req, res) => {
-  let dellCoourse = await User.deleteOne({ _id: req.params._id  });
-  if(dellCoourse)
-  {
-    res.status(201).json({ message: 'Successfully Member Delete' });
-  }else{
-    res.status(201).json({ message: 'Error while deleted User' });
+  let dellCoourse = await User.deleteOne({ _id: req.params._id });
+  if (dellCoourse) {
+    res.status(201).json({ message: "Successfully Member Delete" });
+  } else {
+    res.status(201).json({ message: "Error while deleted User" });
   }
 };
 
@@ -216,12 +238,11 @@ const updateSingleMember = async (req, res) => {
     { _id: req.params._id },
     { $set: req.body }
   );
-      res.send(result);
+  res.send(result);
 };
 
 //get Single User
 const getSingleMember = async (req, res) => {
-
   let result = await User.findOne({ _id: req.params.id });
   res.send(result);
 };
@@ -229,26 +250,26 @@ const getSingleMember = async (req, res) => {
 // get Cources whos has status false
 const getFalseStausCources = async (req, res) => {
   try {
-    let data = await Course.find({status: false});
+    let data = await Course.find({ status: false });
     console.log(data);
     data.length > 0 ? res.send(data) : res.send("No data");
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
-}
+};
 
 // get Cources whos has status false
 const getTrueStausCources = async (req, res) => {
   try {
-    let data = await Course.find({status: true});
+    let data = await Course.find({ status: true });
     console.log(data);
     data.length > 0 ? res.send(data) : res.send("No data");
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
-}
+};
 
 //insert course detail in user
 const setCourseInUser = async (req, res) => {
@@ -257,7 +278,9 @@ const setCourseInUser = async (req, res) => {
 
     // Step 2: Find the user based on userId
     const user = await User.findById(userId);
-    const existingCourse = user.course.find(course => course.courseId === courseId);
+    const existingCourse = user.course.find(
+      (course) => course.courseId === courseId
+    );
 
     if (existingCourse) {
       // If courseId is found, update courseStatus
@@ -268,10 +291,12 @@ const setCourseInUser = async (req, res) => {
     }
     await user.save();
 
-    return res.status(200).json({ message: 'Course status updated successfully' });
+    return res
+      .status(200)
+      .json({ message: "Course status updated successfully" });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -282,19 +307,21 @@ const getTrueCoursesFromUser = async (req, res) => {
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Step 2: Extract courseId values
-    const courseIds = user.course.map(course => course.courseId);
+    const courseIds = user.course.map((course) => course.courseId);
 
     // Step 3: Retrieve corresponding courses from Course table
-    const coursesFromCourseTable = await Course.find({ _id: { $in: courseIds} });
+    const coursesFromCourseTable = await Course.find({
+      _id: { $in: courseIds },
+    });
 
     return res.send(coursesFromCourseTable);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -305,10 +332,12 @@ const getCourseStatus = async (req, res) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const courseExists = user.course.some(course => course.courseId === courseId);
+    const courseExists = user.course.some(
+      (course) => course.courseId === courseId
+    );
 
     if (courseExists) {
       return res.status(200).json({ statusCourse: true });
@@ -317,14 +346,13 @@ const getCourseStatus = async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-
 // quizQustions Api with id passsed
 // getQuizQustions with id
-const getCourseQuiaData= async(req, res) => {
+const getCourseQuiaData = async (req, res) => {
   // try {
   //   let result = await Course.findOne({ _id: req.params.id });
   //   res.send([result]);
@@ -333,68 +361,23 @@ const getCourseQuiaData= async(req, res) => {
   //   console.error(error);
   //   res.status(404).json({ message: 'Course not found' });
   // }
-}
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const frogotPassword= async (req,res) => {
+const frogotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const resetToken = jwt.sign({ userId: user._id }, process.env.RESET_TOKEN_SECRET, { expiresIn: '1h' });
+    const resetToken = jwt.sign(
+      { userId: user._id },
+      process.env.RESET_TOKEN_SECRET,
+      { expiresIn: "1h" }
+    );
 
     user.resetToken = resetToken;
     user.resetTokenExpires = Date.now() + 3600000;
@@ -406,11 +389,11 @@ const frogotPassword= async (req,res) => {
     return res.json({ resetToken });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
-const resetPassword= async (req,res) => {
+const resetPassword = async (req, res) => {
   const { resetToken, newPassword } = req.body;
 
   try {
@@ -419,7 +402,7 @@ const resetPassword= async (req,res) => {
     const user = await User.findById(decodedToken.userId);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     user.password = newPassword;
@@ -428,32 +411,49 @@ const resetPassword= async (req,res) => {
 
     await user.save();
 
-    return res.json({ message: 'Password reset successful' });
+    return res.json({ message: "Password reset successful" });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const sendResetEmail = async (email, resetToken) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
-      user: 'ayanmali358@gmail.com',
-      pass: 'sidwwvtdklhlkhlw',
-  },
+      user: "ayanmali358@gmail.com",
+      pass: "sidwwvtdklhlkhlw",
+    },
   });
 
   const mailOptions = {
-    from: '<your-email@gmail.com>',
+    from: "<your-email@gmail.com>",
     to: email,
-    subject: 'Password Reset',
+    subject: "Password Reset",
     html: `<p>Click the following link to reset your password: <a href="http://localhost:3000/ForgotPassword${resetToken}">Reset Password</a></p>`,
   };
 
   await transporter.sendMail(mailOptions);
 };
 
-
-
-module.exports = {updateGameStatus,getCourseQuiaData,sendOTP,verifyOTP,userRegister,userSigin,getMembers,dellMember,updateSingleMember,getSingleMember,getFalseStausCources,getTrueStausCources, userInfo,getCourseStatus, setCourseInUser, getTrueCoursesFromUser,frogotPassword,resetPassword}
+module.exports = {
+  updateGameStatus,
+  getCourseQuiaData,
+  sendOTP,
+  verifyOTP,
+  userRegister,
+  userSigin,
+  getMembers,
+  dellMember,
+  updateSingleMember,
+  getSingleMember,
+  getFalseStausCources,
+  getTrueStausCources,
+  userInfo,
+  getCourseStatus,
+  setCourseInUser,
+  getTrueCoursesFromUser,
+  frogotPassword,
+  resetPassword,
+};
