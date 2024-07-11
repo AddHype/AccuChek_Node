@@ -19,6 +19,7 @@ const {
   getCourseStatus,
   resetPassword,
   frogotPassword,
+  getAllCourses,
 } = require("../../controllers/userControllers/user.controllers");
 const multer = require("multer");
 const userController = require("../../controllers/userControllers/user.controllers");
@@ -37,7 +38,7 @@ router.route("/sendOTP").post(sendOTP);
 router.route("/verifyOTP").post(verifyOTP);
 
 router.put("/userInfo/:_id", upload.single("image"), userInfo);
-router.route("/updateGameStatus/:_id").put(updateGameStatus);
+router.route("/updateGameStatus/:courseId/:userId").put(updateGameStatus);
 router.route("/addCourseInUser/:userId/:courseId").post(setCourseInUser);
 router.route("/getTrueCoursesFromUser/:id").get(getTrueCoursesFromUser);
 
@@ -61,5 +62,6 @@ router.route("/api/forgotPassword").post(frogotPassword);
 //
 // Rest
 router.route("/api/resetPassword").post(resetPassword);
+router.route("/getAllCourses/:userId").get(getAllCourses);
 
 module.exports = router;

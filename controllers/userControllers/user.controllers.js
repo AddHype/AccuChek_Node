@@ -203,18 +203,90 @@ const userInfo = async (req, res) => {
   }
 };
 
+// const updateGameStatus = async (req, res) => {
+//   try {
+//     const result = await Course.updateOne(
+//       { _id: req.params._id },
+//       { $set: req.body }
+//     );
+//     res.send(result);
+//   } catch (error) {
+//     console.error("Error while updating game status", error);
+//     res.status(500).json({ error: "Failed to update game status" });
+//   }
+// };
 const updateGameStatus = async (req, res) => {
   try {
-    const result = await Course.updateOne(
-      { _id: req.params._id },
-      { $set: req.body }
-    );
-    res.send(result);
+    const { userId, courseId } = req.params;
+    const { progress } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const course = user.course.find((c) => c.courseId === courseId);
+
+    if (!course) {
+      // Add the course to the user's course array if it doesn't exist
+      user.course.push({
+        courseId,
+        progress,
+        courseStatus: false,
+      });
+    } else {
+      // Update the progress of the existing course
+      course.progress = progress;
+    }
+
+    await user.save();
+
+    res.send({ message: "Course progress updated successfully" });
   } catch (error) {
     console.error("Error while updating game status", error);
     res.status(500).json({ error: "Failed to update game status" });
   }
 };
+
+const getAllCourses = async (req, res) => {
+  try {
+    console.log(req.params);
+    const { userId } = req.params;
+
+    // Fetch all courses
+    const courses = await Course.find();
+
+    // Fetch user's courses progress
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Create a map for user's course progress
+    const userCoursesMap = new Map();
+    user.course.forEach((c) => {
+      userCoursesMap.set(c.courseId, c.progress);
+    });
+
+    // Add progress information to courses
+    const coursesWithProgress = courses.map((course) => {
+      const courseId = course._id.toString();
+      const progress = userCoursesMap.get(courseId) || 0;
+      return {
+        ...course.toObject(),
+        progress,
+      };
+    });
+
+    res.json(coursesWithProgress);
+  } catch (error) {
+    console.error("Error while fetching courses", error);
+    res.status(500).json({ error: "INTERNAL SERVER ERROR" });
+  }
+};
+
 // Get All Users
 const getMembers = async (req, res) => {
   let data = await User.find();
@@ -456,4 +528,5 @@ module.exports = {
   getTrueCoursesFromUser,
   frogotPassword,
   resetPassword,
+  getAllCourses,
 };
