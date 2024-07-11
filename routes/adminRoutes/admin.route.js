@@ -15,6 +15,11 @@ const {
   adminRegister,
   getSingleCourse,
   addChapterInCourse,
+  addCategoryWithCourse,
+  addNewCategory,
+  getAllCategories,
+  getCourseWithCategory,
+  deleteAllCategories,
 } = require("../../controllers/adminControllers/admin.controllers");
 // Multer for Upload Vedios and Images
 const multer = require("multer");
@@ -38,7 +43,7 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage });
-router.post("/addCources", upload.single("image"), addCources);
+router.post("/addCources", upload.array("images", 2), addCources);
 router.post("/addChapter", upload.single("image"), addChapterInCourse);
 // Multer end here
 
@@ -59,5 +64,14 @@ router.route("/updateCource/:_id").put(updateCource);
 router.route("/getSingleCourse/:id").get(getSingleCourse);
 
 router.route("/getSingleCourseGame/:id").get(getSingleCourseGame);
+
+// Category Routes
+router.route("/addCategory").post(addNewCategory);
+router.route("/getCategories").get(getAllCategories);
+router.route("/addCategoryWithCourse").post(addCategoryWithCourse);
+router
+  .route("/getCourseThroughCategory/:categoryId")
+  .get(getCourseWithCategory);
+router.route("/deleteAllCategories").delete(deleteAllCategories);
 
 module.exports = router;

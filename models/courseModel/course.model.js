@@ -1,15 +1,27 @@
 const mongoose = require("mongoose");
 const Joi = require("joi");
 
+const categorySchema = new mongoose.Schema({
+  courseId: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "cources",
+    },
+  ],
+  name: {
+    type: String,
+  },
+});
+
 const chapterSchema = new mongoose.Schema({
-  name: { type: mongoose.Schema.Types.String, trim: true },
-  videoUrl: { type: mongoose.Schema.Types.String, trim: true },
+  name: { type: String },
+  videoUrl: { type: String },
   permission: {
     type: mongoose.Schema.Types.String,
     enum: ["public", "private"],
     default: "public",
   },
-  description: { type: mongoose.Schema.Types.String, trim: true },
+  description: { type: String },
   questions: [
     {
       _id: "",
@@ -62,11 +74,6 @@ const courseSchema = new mongoose.Schema({
     required: true,
     minlength: 3,
   },
-  id: {
-    type: Number,
-    required: true,
-    unique: true,
-  },
   description: {
     type: String,
     required: true,
@@ -86,11 +93,10 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  url: {
-    type: String,
-    required: true,
-  },
   image: {
+    type: String,
+  },
+  featureVideo: {
     type: String,
   },
   progress: {
@@ -99,4 +105,5 @@ const courseSchema = new mongoose.Schema({
   },
 });
 const Course = mongoose.model("cources", courseSchema);
-module.exports = { Course };
+const Category = mongoose.model("category", categorySchema);
+module.exports = { Course, Category };

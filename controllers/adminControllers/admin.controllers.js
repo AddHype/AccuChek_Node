@@ -5,6 +5,7 @@ const {
 } = require("../../models/productModel/product.model");
 const {
   Course,
+  Category,
   courseJoiSchema,
 } = require("../../models/courseModel/course.model");
 const {
@@ -81,93 +82,29 @@ const adminRegister = async (req, res) => {
   }
 };
 
-// const addCources = async (req, res) => {
-//   try {
-//     console.log(
-//       "addCourse data: ",
-//       req.body.name,
-//       req.body.id,
-//       req.body.description,
-//       req.body.points,
-//       req.body.status,
-//       req.body.duration,
-//       req.body.url,
-//       req.body.questions,
-//       req.body.kill_course,
-//       req.body.accu_men,
-//       req.body.marquee_test,
-//       req.body.spinWheel_test
-//     );
-//     const {
-//       name,
-//       id,
-//       description,
-//       points,
-//       status,
-//       duration,
-//       url,
-//       questions,
-//       kill_course,
-//       accu_men,
-//       marquee_test,
-//       spinWheel,
-//     } = req.body;
-//     const courseExists = await Course.findOne({ id: id });
-
-//     if (courseExists) {
-//       return res.status(422).json({ error: "This course already exists" });
-//     }
-
-//     const image = req.file.filename;
-//     const newCourse = new Course({
-//       name,
-//       id,
-//       description,
-//       points,
-//       status,
-//       duration,
-//       url,
-//       image,
-//       questions: JSON.parse(questions),
-//       kill_course: JSON.parse(kill_course),
-//       accu_men: JSON.parse(accu_men),
-//       marquee_test: JSON.parse(marquee_test),
-//       spinWheel_test: JSON.parse(spinWheel),
-//     });
-
-//     await newCourse.save();
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Course added successfully",
-//       course: newCourse,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Failed to add course" });
-//   }
-// };
-
 const addCources = async (req, res) => {
   try {
     console.log(req.body);
-    const { name, id, description, points, status, duration, url } = req.body;
-    const courseExists = await Course.findOne({ id: id });
+    const { name, points, description, status, duration } = req.body;
+    const courseExists = await Course.findOne({ name });
 
     if (courseExists) {
       return res.status(422).json({ error: "This course already exists" });
     }
+    console.log(req.files);
+    const files = req.files;
 
-    const image = req.file.filename;
+    const image = files[0].filename;
+    const featureVideo = files[1].filename;
+
     const newCourse = new Course({
       name,
-      id,
       description,
       points,
       status,
       duration,
-      url,
       image,
+      featureVideo,
     });
 
     await newCourse.save();
@@ -185,20 +122,19 @@ const addCources = async (req, res) => {
 
 const addChapterInCourse = async (req, res) => {
   try {
-    console.log(req.body);
+    console.log(req.body, req.file.filename);
     const {
       id,
       name,
-      permission,
       description,
-      questions,
-      kill_course,
-      accu_men,
-      marquee_test,
-      spinWheel_test,
+      // questions,
+      // kill_course,
+      // accu_men,
+      // marquee_test,
+      // spinWheel_test,
     } = req.body;
     const image = req.file.filename;
-    const existingCourse = await Course.findOne({ id: id });
+    const existingCourse = await Course.findById(id);
 
     if (!existingCourse) {
       return res.status(404).json({ error: "Course not found" });
@@ -207,13 +143,13 @@ const addChapterInCourse = async (req, res) => {
     const newChapter = {
       name,
       videoUrl: image,
-      permission,
       description,
-      questions: JSON.parse(questions),
-      kill_course: JSON.parse(kill_course),
-      accu_men: JSON.parse(accu_men),
-      marquee_test: JSON.parse(marquee_test),
-      spinWheel_test: JSON.parse(spinWheel_test),
+      permission: "public",
+      // questions: JSON.parse(questions),
+      // kill_course: JSON.parse(kill_course),
+      // accu_men: JSON.parse(accu_men),
+      // marquee_test: JSON.parse(marquee_test),
+      // spinWheel_test: JSON.parse(spinWheel_test),
     };
 
     existingCourse.chapters.push(newChapter);
@@ -227,6 +163,94 @@ const addChapterInCourse = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to add chapter" });
+  }
+};
+
+const addNewCategory = async (req, res) => {
+  try {
+    console.log(req.body);
+    const { category } = req.body;
+    const existingCategory = await Category.findOne({ name: category });
+
+    if (existingCategory) {
+      res.status(201).json({ message: "category already exist" });
+    }
+
+    const newCategory = new Category({
+      name: category,
+    });
+    await newCategory.save();
+    res.status(200).json({ message: "Category Added!" });
+  } catch (error) {
+    res.status(500).json({ message: "INTERNAL_SERVER_ERROR " });
+  }
+};
+
+const getAllCategories = async (req, res) => {
+  try {
+    const allCategories = await Category.find();
+    res
+      .status(200)
+      .json({ message: "categories fetched!", categories: allCategories });
+  } catch (error) {
+    res.status(500).json({ message: "INTERNAL_SERVER_ERROR " });
+  }
+};
+
+const addCategoryWithCourse = async (req, res) => {
+  try {
+    const { id, category } = req.body;
+    const existingCourse = await Course.findById(id);
+
+    if (!existingCourse) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    let existingCategory = await Category.findOne({ name: category });
+
+    if (!existingCategory) {
+      existingCategory = new Category({
+        name: category,
+        courseId: [existingCourse._id],
+      });
+      await existingCategory.save();
+      return res.status(200).json({
+        message: "Category created and linked with course successfully",
+      });
+    }
+
+    // Add courseId to the existing category's courseId array if not already present
+    if (!existingCategory.courseId.includes(existingCourse._id)) {
+      existingCategory.courseId.push(existingCourse._id);
+      await existingCategory.save();
+    }
+
+    res
+      .status(200)
+      .json({ message: "Category linked with course successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "INTERNAL_SERVER_ERROR" });
+  }
+};
+
+const getCourseWithCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    // Find the category by ID
+    const category = await Category.findById(categoryId).populate("courseId");
+
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    // Get the courses associated with the category
+    const courses = await Course.find({ _id: { $in: category.courseId } });
+
+    res.status(200).json({ message: "Courses fetched!", courses });
+  } catch (error) {
+    console.error("Error fetching courses by category:", error);
+    res.status(500).json({ message: "INTERNAL_SERVER_ERROR" });
   }
 };
 
@@ -301,7 +325,7 @@ const getSingleProduct = async (req, res) => {
 // Get All Cources
 const getCources = async (req, res) => {
   let data = await Course.find();
-  console.log(data);
+  // console.log(data);
   data.length > 0 ? res.send(data) : res.send("No data");
 };
 
@@ -344,6 +368,15 @@ const getSingleCourseGame = async (req, res) => {
   }
 };
 
+const deleteAllCategories = async (req, res) => {
+  try {
+    const deletingCategories = await Category.deleteMany();
+    res.status(200).json({ message: "deleted" });
+  } catch (error) {
+    req.status(500).json({ message: "INTERNAL_SERVER_ERROR" });
+  }
+};
+
 module.exports = {
   getSingleCourseGame,
   getProducts,
@@ -359,4 +392,9 @@ module.exports = {
   adminRegister,
   getSingleCourse,
   addChapterInCourse,
+  addNewCategory,
+  getAllCategories,
+  addCategoryWithCourse,
+  getCourseWithCategory,
+  deleteAllCategories,
 };
